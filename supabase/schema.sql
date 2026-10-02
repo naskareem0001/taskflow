@@ -50,6 +50,7 @@ create table public.tasks (
   title text not null default '',
   requestor_id uuid references public.profiles(id) on delete set null,
   owner_id uuid references public.profiles(id) on delete set null,
+  start_date date,
   due_date date,
   status_id uuid references public.statuses(id) on delete set null,
   stage_id uuid references public.stages(id) on delete set null,

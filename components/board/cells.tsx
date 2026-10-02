@@ -118,14 +118,17 @@ export function PersonCell({ value, onChange }: { value: string | null; onChange
 export function DateCell({
   value,
   onChange,
-  done,
+  done = false,
+  start = false,
 }: {
   value: string | null;
   onChange: (d: string | null) => void;
-  done: boolean;
+  done?: boolean;
+  /** A start date: never shown as overdue or crossed out. */
+  start?: boolean;
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const overdue = !!value && !done && value < todayISO();
+  const overdue = !start && !!value && !done && value < todayISO();
   const pick = (d: string | null) => {
     setAnchor(null);
     if (d !== value) onChange(d);
@@ -142,8 +145,8 @@ export function DateCell({
       >
         {value ? (
           <>
-            {done && <IconCheck className="h-3.5 w-3.5 text-emerald-500" />}
-            <span className={done ? "text-muted line-through" : ""}>{formatDate(value)}</span>
+            {done && !start && <IconCheck className="h-3.5 w-3.5 text-emerald-500" />}
+            <span className={done && !start ? "text-muted line-through" : ""}>{formatDate(value)}</span>
           </>
         ) : (
           <span className="text-muted opacity-0 group-hover/date:opacity-100">+ date</span>

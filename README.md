@@ -14,7 +14,8 @@ Stack: Next.js 15 · TypeScript · Tailwind v4 · Supabase (Postgres, Auth, Real
 2. **SQL Editor → New query** → paste all of `supabase/schema.sql` → **Run**.
    Then do the same with `supabase/add-categories.sql` (project categories and their stages)
    `supabase/add-project-members.sql` (members only see the projects they're added to)
-   and `supabase/add-task-brief.sql` (a brief and up to three links per task).
+   `supabase/add-task-brief.sql` (a brief and up to three links per task)
+   and `supabase/add-start-date.sql` (a start date column).
 3. **Authentication → Sign In / Providers → Email**: turn **off** "Confirm email" (recommended —
    Task Flow is invite-only, and Supabase's built-in mailer only sends a few emails per hour).
 4. **Project Settings → API**: copy the Project URL and the anon / publishable key.

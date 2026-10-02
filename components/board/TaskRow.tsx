@@ -9,8 +9,8 @@ import { IconChat, IconCheck, IconChevron, IconDots, IconPlus, IconTrash } from 
 import { linksOf } from "./links";
 import { ApprovalCell, DateCell, LinkCell, OptionCell, PersonCell } from "./cells";
 
-/** Shared column layout: task name, stage, link, requestor, owner, date, status, approval. */
-export const GRID = "grid grid-cols-[minmax(300px,1fr)_130px_130px_104px_104px_120px_140px_150px]";
+/** Shared column layout: task name, stage, link, requestor, owner, start date, due date, status, approval. */
+export const GRID = "grid grid-cols-[minmax(300px,1fr)_130px_130px_104px_104px_116px_116px_140px_150px]";
 
 /** A subitem is named after its stage, so changing the stage renames it too. */
 export function stagePatch(stages: Option[], stage_id: string | null): Partial<Task> {
@@ -39,8 +39,8 @@ export function HeaderRow({
 }) {
   // Subitems are stages, so their name column and Stage column are one merged column.
   const cols = sub
-    ? [first, "Link", "Requestor", "Owner", "Date", "Status", "Approval"]
-    : [first, "Stage", "Link", "Requestor", "Owner", "Due date", "Status", "Approval"];
+    ? [first, "Link", "Requestor", "Owner", "Start date", "Due date", "Status", "Approval"]
+    : [first, "Stage", "Link", "Requestor", "Owner", "Start date", "Due date", "Status", "Approval"];
   return (
     <div className={`${GRID} relative h-9 border-b border-line text-[11px] font-semibold uppercase tracking-wider text-muted ${sub ? "bg-panel-2/60" : "bg-panel-2"}`}>
       {onSelectAll && (
@@ -200,6 +200,9 @@ export function TaskRow({
         <PersonCell value={task.owner_id} onChange={(owner_id) => onUpdate({ owner_id })} />
       </div>
       <div className={cell}>
+        <DateCell value={task.start_date ?? null} start onChange={(start_date) => onUpdate({ start_date })} />
+      </div>
+      <div className={cell}>
         <DateCell value={task.due_date} done={done} onChange={(due_date) => onUpdate({ due_date })} />
       </div>
       <div className={cell}>
@@ -258,7 +261,7 @@ export function AddRow({ placeholder, onAdd, sub = false }: { placeholder: strin
           className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 outline-none placeholder:text-muted hover:border-line focus:border-accent"
         />
       </div>
-      <div className="col-span-7" />
+      <div className="col-span-8" />
     </div>
   );
 }
@@ -296,7 +299,7 @@ export function AddStageRow({ used, onAdd }: { used: string[]; onAdd: (stage: Op
           </div>
         </Popover>
       </div>
-      <div className="col-span-6" />
+      <div className="col-span-7" />
     </div>
   );
 }

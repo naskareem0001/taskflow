@@ -18,11 +18,13 @@ import { confirmDialog, notify } from "../dialogs";
 
 type Change = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
-// Brief and links arrive with a database update; explain that instead of a raw column error.
+// Some columns arrive with later database updates; explain that instead of a raw column error.
 const briefHint = (message: string) =>
-  /'(brief|links|link)' column|column .*(brief|links)/i.test(message)
-    ? "Briefs and links need a one-time database update. Ask your admin to run supabase/add-task-brief.sql in the Supabase SQL Editor."
-    : message;
+  /start_date/i.test(message)
+    ? "Start dates need a one-time database update. Ask your admin to run supabase/add-start-date.sql in the Supabase SQL Editor."
+    : /'(brief|links|link)' column|column .*(brief|links)/i.test(message)
+      ? "Briefs and links need a one-time database update. Ask your admin to run supabase/add-task-brief.sql in the Supabase SQL Editor."
+      : message;
 
 const byPosition = (a: Task, b: Task) => a.position - b.position || a.created_at.localeCompare(b.created_at);
 const NO_STATUS = "none";
@@ -563,7 +565,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
         {!loaded ? (
           <div className="flex justify-center py-20"><Spinner /></div>
         ) : (
-          <div className="min-w-[1210px] space-y-5">
+          <div className="min-w-[1330px] space-y-5">
             {groups.map((g) => {
               const isCollapsed = collapsed.has(g.key);
               return (

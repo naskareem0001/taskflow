@@ -47,6 +47,7 @@ export interface Task {
   title: string;
   requestor_id: string | null;
   owner_id: string | null;
+  start_date?: string | null;
   due_date: string | null;
   status_id: string | null;
   stage_id: string | null;
