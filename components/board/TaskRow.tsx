@@ -104,7 +104,11 @@ export function TaskRow({
     <div
       className={`${GRID} group relative h-10 border-b border-line text-sm ${selected ? "bg-accent/15" : sub ? "bg-panel-2/60" : ""}`}
       // A subitem's whole row carries a light wash of its stage colour, so the stage reads at a glance.
-      style={tint && !selected ? { background: `color-mix(in srgb, ${tint} 13%, transparent)` } : undefined}
+      style={
+        tint && !selected
+          ? { background: `color-mix(in srgb, ${tint} 24%, transparent)`, boxShadow: `inset 4px 0 0 ${tint}` }
+          : undefined
+      }
     >
       <input
         type="checkbox"
