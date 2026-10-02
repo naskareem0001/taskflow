@@ -197,7 +197,7 @@ function TeamSection() {
   };
 
   const removeMember = async (id: string, name: string) => {
-    if (!(await confirmDialog(`Remove ${name} from FrameFlow? Their tasks stay, but they lose access.`))) return;
+    if (!(await confirmDialog(`Remove ${name} from Task Flow? Their tasks stay, but they lose access.`))) return;
     const { error } = await supabase().from("profiles").delete().eq("id", id);
     if (error) notify(error.message);
     reload();

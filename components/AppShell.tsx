@@ -61,7 +61,7 @@ function Greeting() {
       <p className="truncate text-xl font-medium md:text-2xl">
         Good {part}, {me.full_name.split(" ")[0]}.
       </p>
-      <p className="hidden truncate text-sm text-white/80 sm:block">Here&apos;s where every brand&apos;s videos stand today.</p>
+      <p className="hidden truncate text-sm text-white/80 sm:block">Here&apos;s where every project stands today.</p>
     </div>
   );
 }
@@ -80,7 +80,7 @@ function Sidebar() {
     <div className="flex h-full flex-col">
       <Link href="/" className="flex h-16 items-center gap-2.5 px-5">
         <Logo />
-        <span className="text-lg font-semibold tracking-tight">FrameFlow</span>
+        <span className="text-lg font-semibold tracking-tight">Task Flow</span>
       </Link>
 
       <nav className="flex-1 overflow-y-auto p-3">

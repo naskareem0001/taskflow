@@ -171,7 +171,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       <Screen>
         <h1 className="text-lg font-semibold">No access</h1>
         <p className="text-sm text-muted">
-          {data.email} isn&apos;t a member of this FrameFlow workspace. Ask your admin to invite you.
+          {data.email} isn&apos;t a member of this Task Flow workspace. Ask your admin to invite you.
         </p>
         <button className={btnOutline} onClick={signOut}>Sign out</button>
       </Screen>

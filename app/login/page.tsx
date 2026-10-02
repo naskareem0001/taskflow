@@ -80,7 +80,7 @@ function Login() {
     if (error) {
       setError(
         /database error/i.test(error.message)
-          ? "This email hasn't been invited yet. Ask your FrameFlow admin to invite you."
+          ? "This email hasn't been invited yet. Ask your Task Flow admin to invite you."
           : error.message,
       );
       return;
@@ -101,7 +101,7 @@ function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <Logo className="h-12 w-12" />
-          <h1 className="text-2xl font-semibold">FrameFlow</h1>
+          <h1 className="text-2xl font-semibold">Task Flow</h1>
           <p className="text-sm text-muted">Project tracking for your creative team</p>
         </div>
 
@@ -158,7 +158,7 @@ function Login() {
 
           {mode === "signup" && (
             <p className="mt-4 text-xs leading-5 text-muted">
-              FrameFlow is invite-only. Use the email your admin invited. The very first account becomes the admin.
+              Task Flow is invite-only. Use the email your admin invited. The very first account becomes the admin.
             </p>
           )}
         </div>

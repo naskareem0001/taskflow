@@ -6,7 +6,7 @@ import { DialogHost } from "@/components/dialogs";
 const sora = Sora({ subsets: ["latin"], variable: "--font-app" });
 
 export const metadata: Metadata = {
-  title: "FrameFlow",
+  title: "Task Flow",
   description: "Project tracking for creative teams",
 };
 

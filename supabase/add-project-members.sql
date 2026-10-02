@@ -1,4 +1,4 @@
--- FrameFlow: per-project access. Admins see every project; members only see
+-- Task Flow: per-project access. Admins see every project; members only see
 -- the projects they have been added to. Safe to run more than once.
 
 create table if not exists public.board_members (
@@ -84,7 +84,7 @@ declare
 begin
   select not exists (select 1 from profiles) into first_user;
   if not first_user and not exists (select 1 from invites where lower(email) = lower(new.email)) then
-    raise exception 'This email has not been invited to FrameFlow';
+    raise exception 'This email has not been invited to Task Flow';
   end if;
   insert into profiles (id, email, full_name, color, role)
   values (

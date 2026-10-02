@@ -1,9 +1,10 @@
-# FrameFlow
+# Task Flow
 
-Monday-style task manager for video/animation teams. Boards grouped by status, subitems with a
-**Stage** dropdown (Script → Moodboard → Storyboard → Animatic → Animation), requestor/owner,
-due dates, an approval flow, comments with @mentions, and an in-app notification bell. Live
-updates for everyone via Supabase Realtime.
+Project tracker for a creative studio. One project per brand and category (Video & Motion
+Design, Brand Identity, Web Design, Digital Design); each category has its own stages, and a
+task's subitems are those stages. Tasks are grouped by status, with requestor/owner, due dates,
+an approval flow, threaded chat with @mentions, an in-app notification bell, and per-project
+access. Live updates for everyone via Supabase Realtime.
 
 Stack: Next.js 15 · TypeScript · Tailwind v4 · Supabase (Postgres, Auth, Realtime) · Vercel.
 
@@ -14,7 +15,7 @@ Stack: Next.js 15 · TypeScript · Tailwind v4 · Supabase (Postgres, Auth, Real
    Then do the same with `supabase/add-categories.sql` (project categories and their stages)
    and `supabase/add-project-members.sql` (members only see the projects they're added to).
 3. **Authentication → Sign In / Providers → Email**: turn **off** "Confirm email" (recommended —
-   FrameFlow is invite-only, and Supabase's built-in mailer only sends a few emails per hour).
+   Task Flow is invite-only, and Supabase's built-in mailer only sends a few emails per hour).
 4. **Project Settings → API**: copy the Project URL and the anon / publishable key.
 
 ## 2. Run locally

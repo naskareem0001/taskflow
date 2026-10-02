@@ -46,14 +46,19 @@ export const IconSettings =(p: P) => (
   </Svg>
 );
 
-/** FrameFlow mark: a clapper-style frame with a play triangle. */
+/** Task Flow mark: a check mark with a sweeping "flow" line, on an indigo tile. */
 export function Logo({ className }: P) {
   return (
     <svg viewBox="0 0 32 32" className={className ?? "h-7 w-7"} aria-hidden>
-      <rect x="2" y="6" width="28" height="22" rx="6" fill="#6161ff" />
-      <path d="M2 11h28" stroke="#fff" strokeOpacity=".35" strokeWidth="2" />
-      <path d="m8 6 3 5M15 6l3 5M22 6l3 5" stroke="#fff" strokeOpacity=".5" strokeWidth="2" strokeLinecap="round" />
-      <path d="M13.5 15.5v8l7-4z" fill="#fff" />
+      <defs>
+        <linearGradient id="taskflow-logo-bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#8a8ff0" />
+          <stop offset="1" stopColor="#4b4f9b" />
+        </linearGradient>
+      </defs>
+      <rect x="1" y="1" width="30" height="30" rx="9" fill="url(#taskflow-logo-bg)" />
+      <path d="M6.5 23.5c5 3 13.5 2.5 19-2.5" fill="none" stroke="#fff" strokeOpacity=".45" strokeWidth="2" strokeLinecap="round" />
+      <path d="M9 15.5l4.5 4.5L23.5 9.5" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

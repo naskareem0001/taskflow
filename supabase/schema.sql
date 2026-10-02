@@ -1,4 +1,4 @@
--- FrameFlow database schema.
+-- Task Flow database schema.
 -- Run once in Supabase → SQL Editor → New query → paste → Run.
 
 create extension if not exists pgcrypto;
@@ -117,7 +117,7 @@ declare
 begin
   select not exists (select 1 from profiles) into first_user;
   if not first_user and not exists (select 1 from invites where lower(email) = lower(new.email)) then
-    raise exception 'This email has not been invited to FrameFlow';
+    raise exception 'This email has not been invited to Task Flow';
   end if;
   insert into profiles (id, email, full_name, color, role)
   values (
@@ -144,7 +144,7 @@ begin
       raise exception 'Only admins can change roles';
     end if;
     if old.role = 'admin' and (select count(*) from profiles where role = 'admin') <= 1 then
-      raise exception 'FrameFlow needs at least one admin';
+      raise exception 'Task Flow needs at least one admin';
     end if;
   end if;
   new.email := old.email;

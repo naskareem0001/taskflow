@@ -1,4 +1,4 @@
--- FrameFlow: project categories. Each board belongs to one category, and each
+-- Task Flow: project categories. Each board belongs to one category, and each
 -- category has its own list of stages. Safe to run more than once.
 
 create table if not exists public.categories (
