@@ -186,7 +186,11 @@ export default function BoardView({ boardId }: { boardId: string }) {
       }
       const { error } = await supabase().from("tasks").update(patch).eq("id", id);
       if (error) {
-        notify(error.message);
+        notify(
+          "link" in patch && /link/.test(error.message)
+            ? "Links need a one-time database update. In Supabase → SQL Editor, run:\n\nalter table public.tasks add column if not exists link text;"
+            : error.message,
+        );
         load();
       }
     },
@@ -549,7 +553,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
         {!loaded ? (
           <div className="flex justify-center py-20"><Spinner /></div>
         ) : (
-          <div className="min-w-[1080px] space-y-5">
+          <div className="min-w-[1210px] space-y-5">
             {groups.map((g) => {
               const isCollapsed = collapsed.has(g.key);
               return (

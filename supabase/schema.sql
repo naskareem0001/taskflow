@@ -53,6 +53,7 @@ create table public.tasks (
   due_date date,
   status_id uuid references public.statuses(id) on delete set null,
   stage_id uuid references public.stages(id) on delete set null,
+  link text,
   approval text not null default 'none' check (approval in ('none', 'pending', 'approved', 'changes')),
   position double precision not null default 0,
   created_by uuid references public.profiles(id) on delete set null default auth.uid(),

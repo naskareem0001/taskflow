@@ -6,10 +6,10 @@ import type { Option, Task } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { InlineText, Popover } from "../ui";
 import { IconChat, IconCheck, IconChevron, IconDots, IconPlus, IconTrash } from "../icons";
-import { ApprovalCell, DateCell, OptionCell, PersonCell } from "./cells";
+import { ApprovalCell, DateCell, LinkCell, OptionCell, PersonCell } from "./cells";
 
-/** Shared column layout: task name, stage, requestor, owner, date, status, approval. */
-export const GRID = "grid grid-cols-[minmax(300px,1fr)_130px_104px_104px_120px_140px_150px]";
+/** Shared column layout: task name, stage, link, requestor, owner, date, status, approval. */
+export const GRID = "grid grid-cols-[minmax(300px,1fr)_130px_130px_104px_104px_120px_140px_150px]";
 
 /** A subitem is named after its stage, so changing the stage renames it too. */
 export function stagePatch(stages: Option[], stage_id: string | null): Partial<Task> {
@@ -38,8 +38,8 @@ export function HeaderRow({
 }) {
   // Subitems are stages, so their name column and Stage column are one merged column.
   const cols = sub
-    ? [first, "Requestor", "Owner", "Date", "Status", "Approval"]
-    : [first, "Stage", "Requestor", "Owner", "Due date", "Status", "Approval"];
+    ? [first, "Link", "Requestor", "Owner", "Date", "Status", "Approval"]
+    : [first, "Stage", "Link", "Requestor", "Owner", "Due date", "Status", "Approval"];
   return (
     <div className={`${GRID} relative h-9 border-b border-line text-[11px] font-semibold uppercase tracking-wider text-muted ${sub ? "bg-panel-2/60" : "bg-panel-2"}`}>
       {onSelectAll && (
@@ -181,6 +181,9 @@ export function TaskRow({
         </div>
       )}
       <div className={cell}>
+        <LinkCell value={task.link ?? null} onChange={(link) => onUpdate({ link })} />
+      </div>
+      <div className={cell}>
         <PersonCell value={task.requestor_id} onChange={(requestor_id) => onUpdate({ requestor_id })} />
       </div>
       <div className={cell}>
@@ -245,7 +248,7 @@ export function AddRow({ placeholder, onAdd, sub = false }: { placeholder: strin
           className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 outline-none placeholder:text-muted hover:border-line focus:border-accent"
         />
       </div>
-      <div className="col-span-6" />
+      <div className="col-span-7" />
     </div>
   );
 }
@@ -283,7 +286,7 @@ export function AddStageRow({ used, onAdd }: { used: string[]; onAdd: (stage: Op
           </div>
         </Popover>
       </div>
-      <div className="col-span-5" />
+      <div className="col-span-6" />
     </div>
   );
 }

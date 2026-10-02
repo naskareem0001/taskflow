@@ -44,6 +44,8 @@ export interface Task {
   due_date: string | null;
   status_id: string | null;
   stage_id: string | null;
+  /** A reference link for the work, e.g. a Milanote or Figma board. */
+  link?: string | null;
   approval: ApprovalState;
   position: number;
   created_by: string | null;
