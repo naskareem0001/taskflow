@@ -8,6 +8,7 @@ import { useWorkspace } from "@/components/workspace";
 import { Avatar, PasswordInput, Popover, btnOutline, btnPrimary, field } from "@/components/ui";
 import { IconDown, IconTrash, IconUp, IconX } from "@/components/icons";
 import { confirmDialog, notify } from "@/components/dialogs";
+import { CopyInviteButton, inviteMessage } from "@/components/CopyInvite";
 
 export default function SettingsPage() {
   const { isAdmin, statuses, stages, categories } = useWorkspace();
@@ -251,14 +252,16 @@ function TeamSection() {
             <button disabled={!email.trim()} className={btnPrimary}>Invite</button>
           </form>
           <p className="mt-2 text-xs text-muted">
-            After inviting, send them this link to create their account: <span className="font-medium text-fg">{signupUrl}</span>
+            Task Flow doesn&apos;t email invites. After inviting, use “Copy message” and send it to them. People invited here
+            can sign up but see no projects until you add them to one with <b>Share</b> on the project. Sign-up link:{" "}
+            <span className="font-medium text-fg">{signupUrl}</span>
           </p>
           {invites.length > 0 && (
             <ul className="mt-3 space-y-1">
               {invites.map((i) => (
                 <li key={i.email} className="flex items-center gap-2 rounded-md bg-panel-2 px-3 py-1.5 text-sm">
                   <span className="flex-1 truncate">{i.email}</span>
-                  <span className="text-xs text-muted">Pending</span>
+                  <CopyInviteButton text={inviteMessage({ email: i.email })} label="Copy message" />
                   <button onClick={() => revoke(i.email)} className="rounded p-1 text-muted hover:text-red-500" title="Revoke invite">
                     <IconX className="h-3.5 w-3.5" />
                   </button>

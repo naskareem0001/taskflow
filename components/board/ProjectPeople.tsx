@@ -6,6 +6,7 @@ import type { Profile } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { Avatar, Popover, btnGhost, btnPrimary, field } from "../ui";
 import { IconPlus, IconX } from "../icons";
+import { CopyInviteButton, inviteMessage } from "../CopyInvite";
 import { confirmDialog, notify } from "../dialogs";
 
 /**
@@ -34,7 +35,8 @@ export function ProjectPeople({
   const [pending, setPending] = useState<string[]>([]);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  // The person just invited or added, so the admin can copy a message to send them.
+  const [note, setNote] = useState<{ email: string; existing: boolean } | null>(null);
 
   const loadPending = useCallback(async () => {
     if (!isAdmin) return;
@@ -53,11 +55,7 @@ export function ProjectPeople({
     setBusy(false);
     if (error) return notify(error.message);
     setEmail("");
-    setNote(
-      data === "invited"
-        ? `Invited. Send them ${window.location.origin}/login to create their account with ${address.trim().toLowerCase()}.`
-        : null,
-    );
+    setNote({ email: address.trim().toLowerCase(), existing: data !== "invited" });
     onChanged();
     loadPending();
   };
@@ -157,13 +155,22 @@ export function ProjectPeople({
                   Invite
                 </button>
               </form>
-              {note && <p className="mt-2 break-words text-xs text-emerald-600 dark:text-emerald-400">{note}</p>}
+              {note && (
+                <div className="mt-2 rounded-xl bg-emerald-500/10 px-3 py-2 text-xs">
+                  <p className="mb-1.5 text-emerald-700 dark:text-emerald-400">
+                    {note.existing
+                      ? `Added. They can see “${boardName}” now.`
+                      : `Invited. Task Flow doesn't email them, so send them the sign-up steps:`}
+                  </p>
+                  <CopyInviteButton text={inviteMessage({ email: note.email, project: boardName, existing: note.existing })} />
+                </div>
+              )}
               {pending.length > 0 && (
                 <ul className="mt-3 space-y-1">
                   {pending.map((address) => (
                     <li key={address} className="flex items-center gap-2 rounded-xl bg-panel-2 px-3 py-1.5 text-sm">
                       <span className="min-w-0 flex-1 truncate">{address}</span>
-                      <span className="text-xs text-muted">Invited</span>
+                      <CopyInviteButton text={inviteMessage({ email: address, project: boardName })} label="Copy message" />
                       <button onClick={() => revoke(address)} className="rounded-full p-1 text-muted hover:text-red-500" title="Cancel invite">
                         <IconX className="h-3.5 w-3.5" />
                       </button>
