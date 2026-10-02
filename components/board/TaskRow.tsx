@@ -95,12 +95,17 @@ export function TaskRow({
   onDelete: () => void;
   onAddSub?: () => void;
 }) {
-  const { statuses, stages } = useWorkspace();
+  const { statuses, stages, allStages } = useWorkspace();
+  const tint = sub ? allStages.find((s) => s.id === task.stage_id)?.color : undefined;
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const done = isDoneName(statuses.find((s) => s.id === task.status_id)?.name);
 
   return (
-    <div className={`${GRID} group relative h-10 border-b border-line text-sm ${selected ? "bg-accent/15" : sub ? "bg-panel-2/60" : ""}`}>
+    <div
+      className={`${GRID} group relative h-10 border-b border-line text-sm ${selected ? "bg-accent/15" : sub ? "bg-panel-2/60" : ""}`}
+      // A subitem's whole row carries a light wash of its stage colour, so the stage reads at a glance.
+      style={tint && !selected ? { background: `color-mix(in srgb, ${tint} 13%, transparent)` } : undefined}
+    >
       <input
         type="checkbox"
         className={`${checkbox} ${gutter(sub)}`}
