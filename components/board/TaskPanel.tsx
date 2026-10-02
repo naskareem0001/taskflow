@@ -7,14 +7,14 @@ import { firstName, timeAgo } from "@/lib/format";
 import type { ApprovalAction, ApprovalEvent, ApprovalState, Comment, Profile, Task, TaskLink } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { Avatar, btnOutline, btnPrimary } from "../ui";
-import { IconLink, IconReply, IconTrash, IconX } from "../icons";
+import { IconEdit, IconLink, IconReply, IconTrash, IconX } from "../icons";
 import { LinksEditor, cleanLinks, linkName, linksOf } from "./links";
 import { ApprovalBadge } from "./cells";
 import { confirmDialog, notify } from "../dialogs";
 
 type Change = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
-export type PanelView = "chat" | "approval" | "brief";
+export type PanelView = "chat" | "approval";
 
 /**
  * Side panel for one task or subitem. The chat icon opens it as a plain chat;
@@ -91,7 +91,7 @@ export function TaskPanel({
       <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col border-l border-line bg-panel shadow-2xl md:inset-y-3 md:right-3 md:rounded-3xl md:border">
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-line px-5">
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted">{view === "chat" ? "Chat" : view === "brief" ? "Brief & links" : "Approval"}</p>
+            <p className="text-xs text-muted">{view === "chat" ? "Chat" : "Approval"}</p>
             <h2 className="truncate font-semibold">
               {parent && <span className="font-normal text-muted">{parent.title} · </span>}
               {name}
@@ -105,10 +105,12 @@ export function TaskPanel({
         <div className="flex-1 overflow-y-auto p-5">
           {view === "approval" ? (
             <ApprovalCard task={task} events={events} onPatchLocal={onPatchLocal} />
-          ) : view === "brief" ? (
-            <BriefView task={task} onUpdate={onUpdate} />
           ) : (
-            <Updates taskId={task.id} comments={comments} />
+            <>
+              <BriefSummary task={task} onUpdate={onUpdate} />
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">Chat</h3>
+              <Updates taskId={task.id} comments={comments} />
+            </>
           )}
         </div>
       </aside>
@@ -116,94 +118,101 @@ export function TaskPanel({
   );
 }
 
-/** The task's brief and its link buttons, both editable by anyone on the project. */
-function BriefView({ task, onUpdate }: { task: Task; onUpdate: (patch: Partial<Task>) => void }) {
+/**
+ * Shown at the top of the chat: the task's brief and its link buttons, so
+ * everyone reads the brief before the conversation. Anyone on the project can edit it.
+ */
+function BriefSummary({ task, onUpdate }: { task: Task; onUpdate: (patch: Partial<Task>) => void }) {
   const links = linksOf(task);
-  const [brief, setBrief] = useState(task.brief ?? "");
-  const [editingLinks, setEditingLinks] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [brief, setBrief] = useState("");
   const [drafts, setDrafts] = useState<TaskLink[]>([]);
   const [bad, setBad] = useState<number | null>(null);
-  const dirty = brief.trim() !== (task.brief ?? "").trim();
 
-  const saveLinks = () => {
-    const cleaned = cleanLinks(drafts);
-    if (cleaned.bad !== null) return setBad(cleaned.bad);
-    setEditingLinks(false);
-    onUpdate({ links: cleaned.links });
+  const startEdit = () => {
+    setBrief(task.brief ?? "");
+    setDrafts(links.map((l) => ({ ...l })));
+    setBad(null);
+    setEditing(true);
   };
 
-  return (
-    <div className="space-y-6">
-      <section>
+  const save = () => {
+    const cleaned = cleanLinks(drafts);
+    if (cleaned.bad !== null) return setBad(cleaned.bad);
+    setEditing(false);
+    onUpdate({ brief: brief.trim(), links: cleaned.links });
+  };
+
+  if (editing) {
+    return (
+      <section className="mb-5 rounded-2xl border border-accent/40 bg-panel-2 p-4">
         <h3 className="mb-2 text-sm font-semibold">Brief</h3>
         <textarea
+          autoFocus
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
-          rows={8}
+          rows={6}
           placeholder="What needs doing, and anything the team should know."
-          className="w-full resize-y rounded-2xl border border-line bg-panel-2 px-3.5 py-2.5 text-sm leading-6 outline-none placeholder:text-muted focus:border-accent"
+          className="w-full resize-y rounded-xl border border-line bg-panel px-3 py-2 text-sm leading-6 outline-none placeholder:text-muted focus:border-accent"
         />
-        {dirty && (
-          <div className="mt-2 flex justify-end gap-2">
-            <button onClick={() => setBrief(task.brief ?? "")} className="rounded-full px-3 py-2 text-sm text-muted hover:bg-hover hover:text-fg">
-              Cancel
-            </button>
-            <button onClick={() => onUpdate({ brief: brief.trim() })} className={btnPrimary}>
-              Save brief
-            </button>
-          </div>
-        )}
-      </section>
-
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Links</h3>
-          {!editingLinks && (
-            <button
-              onClick={() => {
-                setDrafts(links.length ? links.map((l) => ({ ...l })) : [{ label: "", url: "" }]);
-                setBad(null);
-                setEditingLinks(true);
-              }}
-              className="rounded-full px-2.5 py-1 text-xs font-medium text-accent hover:bg-hover"
-            >
-              {links.length ? "Edit links" : "Add links"}
-            </button>
-          )}
+        <h3 className="mb-2 mt-3 text-sm font-semibold">Links</h3>
+        <LinksEditor
+          value={drafts}
+          bad={bad}
+          onChange={(v) => {
+            setDrafts(v);
+            setBad(null);
+          }}
+        />
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={() => setEditing(false)} className="rounded-full px-3 py-2 text-sm text-muted hover:bg-hover hover:text-fg">
+            Cancel
+          </button>
+          <button onClick={save} className={btnPrimary}>
+            Save
+          </button>
         </div>
-        {editingLinks ? (
-          <div>
-            <LinksEditor
-              value={drafts}
-              bad={bad}
-              onChange={(v) => {
-                setDrafts(v);
-                setBad(null);
-              }}
-            />
-            <div className="mt-3 flex justify-end gap-2">
-              <button onClick={() => setEditingLinks(false)} className="rounded-full px-3 py-2 text-sm text-muted hover:bg-hover hover:text-fg">
-                Cancel
-              </button>
-              <button onClick={saveLinks} className={btnPrimary}>
-                Save links
-              </button>
-            </div>
-          </div>
-        ) : links.length ? (
-          <div className="flex flex-wrap gap-2">
-            {links.map((l) => (
-              <a key={l.url} href={l.url} target="_blank" rel="noreferrer" title={l.url} className={`${btnOutline} max-w-full`}>
-                <IconLink className="h-4 w-4 shrink-0 text-accent" />
-                <span className="truncate">{linkName(l)}</span>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted">No links yet.</p>
-        )}
       </section>
-    </div>
+    );
+  }
+
+  if (!task.brief && !links.length) {
+    return (
+      <button
+        onClick={startEdit}
+        className="mb-5 flex w-full items-center gap-2 rounded-2xl border border-dashed border-line px-4 py-3 text-left text-sm text-muted hover:border-accent hover:text-fg"
+      >
+        <IconEdit /> Add a brief and links for this task
+      </button>
+    );
+  }
+
+  return (
+    <section className="mb-5 rounded-2xl border border-line bg-panel-2 p-4">
+      <div className="mb-1.5 flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Brief</h3>
+        <button onClick={startEdit} className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-accent hover:bg-hover">
+          <IconEdit className="h-3.5 w-3.5" /> Edit
+        </button>
+      </div>
+      {task.brief ? (
+        <p className="whitespace-pre-wrap break-words text-sm leading-6">
+          <RichText text={task.brief} />
+        </p>
+      ) : (
+        <p className="text-sm text-muted">No brief written yet.</p>
+      )}
+      {links.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {links.map((l) => (
+            <a key={l.url} href={l.url} target="_blank" rel="noreferrer" title={l.url} className={`${btnOutline} max-w-full !py-1.5`}>
+              <IconLink className="h-4 w-4 shrink-0 text-accent" />
+              <span className="truncate">{linkName(l)}</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -44,8 +44,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const openId = params.get("task");
-  const viewParam = params.get("view");
-  const openView: PanelView = viewParam === "approval" || viewParam === "brief" ? viewParam : "chat";
+  const openView: PanelView = params.get("view") === "approval" ? "approval" : "chat";
   // The group a new task is being created in (the New task dialog is open while set).
   const [newTaskIn, setNewTaskIn] = useState<string | null>(null);
 
@@ -620,7 +619,6 @@ export default function BoardView({ boardId }: { boardId: string }) {
                               onToggle={() => setExpanded((e) => toggle(e, t.id))}
                               onOpen={() => openTask(t.id)}
                               onOpenApproval={() => openTask(t.id, "approval")}
-                              onOpenBrief={() => openTask(t.id, "brief")}
                               onUpdate={(patch) => update(t.id, patch)}
                               onDelete={() => remove(t.id)}
                               onAddSub={() => setExpanded((e) => new Set(e).add(t.id))}
@@ -639,7 +637,6 @@ export default function BoardView({ boardId }: { boardId: string }) {
                                     onSelect={() => select([k.id], !selected.has(k.id))}
                                     onOpen={() => openTask(k.id)}
                                     onOpenApproval={() => openTask(k.id, "approval")}
-                                    onOpenBrief={() => openTask(k.id, "brief")}
                                     onUpdate={(patch) => update(k.id, patch)}
                                     onDelete={() => remove(k.id)}
                                   />

@@ -5,7 +5,7 @@ import { isDoneName } from "@/lib/format";
 import type { Option, Task } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { InlineText, Popover } from "../ui";
-import { IconChat, IconCheck, IconChevron, IconDoc, IconDots, IconPlus, IconTrash } from "../icons";
+import { IconChat, IconCheck, IconChevron, IconDots, IconPlus, IconTrash } from "../icons";
 import { linksOf } from "./links";
 import { ApprovalCell, DateCell, LinkCell, OptionCell, PersonCell } from "./cells";
 
@@ -74,7 +74,6 @@ export function TaskRow({
   onToggle,
   onOpen,
   onOpenApproval,
-  onOpenBrief,
   onUpdate,
   onDelete,
   onAddSub,
@@ -90,10 +89,9 @@ export function TaskRow({
   selected?: boolean;
   onSelect: () => void;
   onToggle?: () => void;
-  /** Opens the chat for this row. */
+  /** Opens the brief and chat for this row. */
   onOpen: () => void;
   onOpenApproval: () => void;
-  onOpenBrief: () => void;
   onUpdate: (patch: Partial<Task>) => void;
   onDelete: () => void;
   onAddSub?: () => void;
@@ -153,14 +151,7 @@ export function TaskRow({
           </button>
         )}
         <div className="ml-auto flex shrink-0 items-center">
-          <button
-            onClick={onOpenBrief}
-            className={`rounded p-1.5 hover:bg-hover hover:text-fg ${task.brief ? "text-accent" : "text-muted"}`}
-            title={task.brief ? `Brief: ${task.brief.slice(0, 140)}` : "Add a brief"}
-          >
-            <IconDoc />
-          </button>
-          <button onClick={onOpen} className="relative rounded p-1.5 text-muted hover:bg-hover hover:text-fg" title="Open chat">
+          <button onClick={onOpen} className="relative rounded p-1.5 text-muted hover:bg-hover hover:text-fg" title="Open brief and chat">
             <IconChat />
             {commentCount > 0 && (
               <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-accent px-1 text-center text-[10px] leading-4 text-white">
@@ -176,11 +167,8 @@ export function TaskRow({
             <IconDots />
           </button>
           <Popover anchor={menu} onClose={() => setMenu(null)} width={180} align="end">
-            <button onClick={() => { setMenu(null); onOpenBrief(); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-hover">
-              <IconDoc /> Brief &amp; links
-            </button>
             <button onClick={() => { setMenu(null); onOpen(); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-hover">
-              <IconChat /> Chat
+              <IconChat /> Brief &amp; chat
             </button>
             {onAddSub && (
               <button onClick={() => { setMenu(null); onAddSub(); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-hover">
