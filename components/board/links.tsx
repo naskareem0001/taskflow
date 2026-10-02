@@ -8,10 +8,13 @@ export const MAX_LINKS = 3;
 /** Turns what someone typed into a safe web address, or null if it isn't one. */
 export function cleanUrl(raw: string): string | null {
   const text = raw.trim();
-  if (!text) return null;
+  // Browsers happily parse "not a link" as a host, so rule out spaces and dot-less hosts ourselves.
+  if (!text || /\s/.test(text)) return null;
   try {
     const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `https://${text}`);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (!url.hostname.includes(".") && url.hostname !== "localhost") return null;
+    return url.toString();
   } catch {
     return null;
   }
