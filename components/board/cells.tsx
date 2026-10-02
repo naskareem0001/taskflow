@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { formatDate, todayISO } from "@/lib/format";
-import type { ApprovalState, Option } from "@/lib/types";
+import type { ApprovalState, Option, TaskLink } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { Avatar, Popover } from "../ui";
 import { IconCheck, IconChevron, IconEdit, IconLink, IconPerson, IconX } from "../icons";
+import { LinksEditor, cleanLinks, linkName } from "./links";
 
 /** Colored status/stage cell with a dropdown of options (Monday-style). */
 export function OptionCell({
@@ -254,67 +255,56 @@ export function ApprovalCell({ state, onOpen }: { state: ApprovalState; onOpen: 
   );
 }
 
-/** Turns what someone typed into a safe web address, or null if it isn't one. */
-function cleanUrl(raw: string): string | null {
-  const text = raw.trim();
-  if (!text) return null;
-  try {
-    const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(text) ? text : `https://${text}`);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-/** A reference link (Milanote, Figma, Drive…). Shows the site name; opens in a new tab. */
-export function LinkCell({ value, onChange }: { value: string | null; onChange: (link: string | null) => void }) {
+/** The task's links. Shows the first as a pill (+N for the rest); the pencil edits all of them. */
+export function LinkCell({ value, onChange }: { value: TaskLink[]; onChange: (links: TaskLink[]) => void }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const [draft, setDraft] = useState("");
-  const [bad, setBad] = useState(false);
-
-  let host = "";
-  try {
-    if (value) host = new URL(value).hostname.replace(/^(www|app)\./, "");
-  } catch {}
+  const [drafts, setDrafts] = useState<TaskLink[]>([]);
+  const [bad, setBad] = useState<number | null>(null);
+  const first = value[0];
 
   const edit = () => {
-    setDraft(value ?? "");
-    setBad(false);
+    setDrafts(value.length ? value.map((l) => ({ ...l })) : [{ label: "", url: "" }]);
+    setBad(null);
     setAnchor(anchor ? null : wrap.current);
   };
 
   const save = () => {
-    if (!draft.trim()) {
-      setAnchor(null);
-      if (value) onChange(null);
-      return;
-    }
-    const url = cleanUrl(draft);
-    if (!url) return setBad(true);
+    const cleaned = cleanLinks(drafts);
+    if (cleaned.bad !== null) return setBad(cleaned.bad);
     setAnchor(null);
-    if (url !== value) onChange(url);
+    if (JSON.stringify(cleaned.links) !== JSON.stringify(value)) onChange(cleaned.links);
   };
 
   return (
     <div ref={wrap} className="group/link flex h-full w-full items-center justify-center gap-0.5 px-1.5">
-      {value ? (
+      {first ? (
         <>
           <a
-            href={value}
+            href={first.url}
             target="_blank"
             rel="noreferrer"
-            title={value}
+            title={first.url}
             className="flex min-w-0 items-center gap-1 rounded-full bg-accent/15 px-2 py-1 text-xs font-medium text-accent hover:bg-accent/25"
           >
             <IconLink className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{host || "Open"}</span>
+            <span className="truncate">{linkName(first)}</span>
           </a>
+          {value.length > 1 && (
+            <button
+              type="button"
+              onClick={edit}
+              className="shrink-0 rounded-full bg-hover px-1.5 py-0.5 text-[11px] font-medium text-muted hover:text-fg"
+              title={value.slice(1).map(linkName).join(", ")}
+            >
+              +{value.length - 1}
+            </button>
+          )}
           <button
             type="button"
             onClick={edit}
             className="shrink-0 rounded-full p-1 text-muted opacity-0 hover:bg-hover hover:text-fg focus:opacity-100 group-hover/link:opacity-100"
-            title="Edit link"
+            title="Edit links"
           >
             <IconEdit className="h-3.5 w-3.5" />
           </button>
@@ -328,7 +318,7 @@ export function LinkCell({ value, onChange }: { value: string | null; onChange: 
           + link
         </button>
       )}
-      <Popover anchor={anchor} onClose={() => setAnchor(null)} width={320}>
+      <Popover anchor={anchor} onClose={() => setAnchor(null)} width={400}>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -336,33 +326,31 @@ export function LinkCell({ value, onChange }: { value: string | null; onChange: 
           }}
           className="p-1"
         >
-          <label className="mb-1 block text-xs font-medium text-muted">Link (Milanote, Figma, Drive…)</label>
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              setBad(false);
+          <p className="mb-2 text-xs font-medium text-muted">Links (Milanote, Figma, Drive…), up to three</p>
+          {value.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {value.map((l) => (
+                <a
+                  key={l.url}
+                  href={l.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 rounded-full bg-accent/15 px-2.5 py-1 text-xs font-medium text-accent hover:bg-accent/25"
+                >
+                  <IconLink className="h-3.5 w-3.5" /> {linkName(l)}
+                </a>
+              ))}
+            </div>
+          )}
+          <LinksEditor
+            value={drafts}
+            bad={bad}
+            onChange={(v) => {
+              setDrafts(v);
+              setBad(null);
             }}
-            placeholder="https://app.milanote.com/…"
-            className={`w-full rounded-xl border bg-panel-2 px-3 py-2 text-sm outline-none focus:border-accent ${bad ? "border-red-500" : "border-line"}`}
           />
-          {bad && <p className="mt-1 text-xs text-red-500">That doesn&apos;t look like a web link.</p>}
-          <div className="mt-2 flex items-center justify-between">
-            {value ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setAnchor(null);
-                  onChange(null);
-                }}
-                className="rounded-full px-3 py-1.5 text-sm text-muted hover:bg-hover hover:text-red-500"
-              >
-                Remove
-              </button>
-            ) : (
-              <span />
-            )}
+          <div className="mt-3 flex justify-end">
             <button type="submit" className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-fg hover:brightness-110">
               Save
             </button>

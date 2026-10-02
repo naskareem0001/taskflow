@@ -31,6 +31,12 @@ export interface Board {
   created_at: string;
 }
 
+export interface TaskLink {
+  /** Text on the button; the site name is used when empty. */
+  label: string;
+  url: string;
+}
+
 export type ApprovalState = "none" | "pending" | "approved" | "changes";
 export type ApprovalAction = "requested" | "approved" | "changes";
 
@@ -44,8 +50,12 @@ export interface Task {
   due_date: string | null;
   status_id: string | null;
   stage_id: string | null;
-  /** A reference link for the work, e.g. a Milanote or Figma board. */
+  /** Older single link; superseded by `links`. */
   link?: string | null;
+  /** Short description of what the task is. */
+  brief?: string;
+  /** Up to three reference links (Milanote, Figma, Drive…). */
+  links?: TaskLink[];
   approval: ApprovalState;
   position: number;
   created_by: string | null;

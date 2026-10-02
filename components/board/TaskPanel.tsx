@@ -4,16 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { firstName, timeAgo } from "@/lib/format";
-import type { ApprovalAction, ApprovalEvent, ApprovalState, Comment, Profile, Task } from "@/lib/types";
+import type { ApprovalAction, ApprovalEvent, ApprovalState, Comment, Profile, Task, TaskLink } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { Avatar, btnOutline, btnPrimary } from "../ui";
-import { IconReply, IconTrash, IconX } from "../icons";
+import { IconLink, IconReply, IconTrash, IconX } from "../icons";
+import { LinksEditor, cleanLinks, linkName, linksOf } from "./links";
 import { ApprovalBadge } from "./cells";
 import { confirmDialog, notify } from "../dialogs";
 
 type Change = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
-export type PanelView = "chat" | "approval";
+export type PanelView = "chat" | "approval" | "brief";
 
 /**
  * Side panel for one task or subitem. The chat icon opens it as a plain chat;
@@ -25,12 +26,14 @@ export function TaskPanel({
   parent,
   view,
   onClose,
+  onUpdate,
   onPatchLocal,
 }: {
   task: Task;
   parent?: Task;
   view: PanelView;
   onClose: () => void;
+  onUpdate: (patch: Partial<Task>) => void;
   onPatchLocal: (patch: Partial<Task>) => void;
 }) {
   const { allStages } = useWorkspace();
@@ -88,7 +91,7 @@ export function TaskPanel({
       <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[520px] flex-col border-l border-line bg-panel shadow-2xl md:inset-y-3 md:right-3 md:rounded-3xl md:border">
         <div className="flex h-16 shrink-0 items-center gap-3 border-b border-line px-5">
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted">{view === "chat" ? "Chat" : "Approval"}</p>
+            <p className="text-xs text-muted">{view === "chat" ? "Chat" : view === "brief" ? "Brief & links" : "Approval"}</p>
             <h2 className="truncate font-semibold">
               {parent && <span className="font-normal text-muted">{parent.title} · </span>}
               {name}
@@ -102,12 +105,105 @@ export function TaskPanel({
         <div className="flex-1 overflow-y-auto p-5">
           {view === "approval" ? (
             <ApprovalCard task={task} events={events} onPatchLocal={onPatchLocal} />
+          ) : view === "brief" ? (
+            <BriefView task={task} onUpdate={onUpdate} />
           ) : (
             <Updates taskId={task.id} comments={comments} />
           )}
         </div>
       </aside>
     </>
+  );
+}
+
+/** The task's brief and its link buttons, both editable by anyone on the project. */
+function BriefView({ task, onUpdate }: { task: Task; onUpdate: (patch: Partial<Task>) => void }) {
+  const links = linksOf(task);
+  const [brief, setBrief] = useState(task.brief ?? "");
+  const [editingLinks, setEditingLinks] = useState(false);
+  const [drafts, setDrafts] = useState<TaskLink[]>([]);
+  const [bad, setBad] = useState<number | null>(null);
+  const dirty = brief.trim() !== (task.brief ?? "").trim();
+
+  const saveLinks = () => {
+    const cleaned = cleanLinks(drafts);
+    if (cleaned.bad !== null) return setBad(cleaned.bad);
+    setEditingLinks(false);
+    onUpdate({ links: cleaned.links });
+  };
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <h3 className="mb-2 text-sm font-semibold">Brief</h3>
+        <textarea
+          value={brief}
+          onChange={(e) => setBrief(e.target.value)}
+          rows={8}
+          placeholder="What needs doing, and anything the team should know."
+          className="w-full resize-y rounded-2xl border border-line bg-panel-2 px-3.5 py-2.5 text-sm leading-6 outline-none placeholder:text-muted focus:border-accent"
+        />
+        {dirty && (
+          <div className="mt-2 flex justify-end gap-2">
+            <button onClick={() => setBrief(task.brief ?? "")} className="rounded-full px-3 py-2 text-sm text-muted hover:bg-hover hover:text-fg">
+              Cancel
+            </button>
+            <button onClick={() => onUpdate({ brief: brief.trim() })} className={btnPrimary}>
+              Save brief
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Links</h3>
+          {!editingLinks && (
+            <button
+              onClick={() => {
+                setDrafts(links.length ? links.map((l) => ({ ...l })) : [{ label: "", url: "" }]);
+                setBad(null);
+                setEditingLinks(true);
+              }}
+              className="rounded-full px-2.5 py-1 text-xs font-medium text-accent hover:bg-hover"
+            >
+              {links.length ? "Edit links" : "Add links"}
+            </button>
+          )}
+        </div>
+        {editingLinks ? (
+          <div>
+            <LinksEditor
+              value={drafts}
+              bad={bad}
+              onChange={(v) => {
+                setDrafts(v);
+                setBad(null);
+              }}
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button onClick={() => setEditingLinks(false)} className="rounded-full px-3 py-2 text-sm text-muted hover:bg-hover hover:text-fg">
+                Cancel
+              </button>
+              <button onClick={saveLinks} className={btnPrimary}>
+                Save links
+              </button>
+            </div>
+          </div>
+        ) : links.length ? (
+          <div className="flex flex-wrap gap-2">
+            {links.map((l) => (
+              <a key={l.url} href={l.url} target="_blank" rel="noreferrer" title={l.url} className={`${btnOutline} max-w-full`}>
+                <IconLink className="h-4 w-4 shrink-0 text-accent" />
+                <span className="truncate">{linkName(l)}</span>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted">No links yet.</p>
+        )}
+      </section>
+    </div>
   );
 }
 

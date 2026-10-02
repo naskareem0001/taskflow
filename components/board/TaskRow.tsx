@@ -5,7 +5,8 @@ import { isDoneName } from "@/lib/format";
 import type { Option, Task } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { InlineText, Popover } from "../ui";
-import { IconChat, IconCheck, IconChevron, IconDots, IconPlus, IconTrash } from "../icons";
+import { IconChat, IconCheck, IconChevron, IconDoc, IconDots, IconPlus, IconTrash } from "../icons";
+import { linksOf } from "./links";
 import { ApprovalCell, DateCell, LinkCell, OptionCell, PersonCell } from "./cells";
 
 /** Shared column layout: task name, stage, link, requestor, owner, date, status, approval. */
@@ -73,6 +74,7 @@ export function TaskRow({
   onToggle,
   onOpen,
   onOpenApproval,
+  onOpenBrief,
   onUpdate,
   onDelete,
   onAddSub,
@@ -91,6 +93,7 @@ export function TaskRow({
   /** Opens the chat for this row. */
   onOpen: () => void;
   onOpenApproval: () => void;
+  onOpenBrief: () => void;
   onUpdate: (patch: Partial<Task>) => void;
   onDelete: () => void;
   onAddSub?: () => void;
@@ -150,6 +153,13 @@ export function TaskRow({
           </button>
         )}
         <div className="ml-auto flex shrink-0 items-center">
+          <button
+            onClick={onOpenBrief}
+            className={`rounded p-1.5 hover:bg-hover hover:text-fg ${task.brief ? "text-accent" : "text-muted"}`}
+            title={task.brief ? `Brief: ${task.brief.slice(0, 140)}` : "Add a brief"}
+          >
+            <IconDoc />
+          </button>
           <button onClick={onOpen} className="relative rounded p-1.5 text-muted hover:bg-hover hover:text-fg" title="Open chat">
             <IconChat />
             {commentCount > 0 && (
@@ -166,6 +176,9 @@ export function TaskRow({
             <IconDots />
           </button>
           <Popover anchor={menu} onClose={() => setMenu(null)} width={180} align="end">
+            <button onClick={() => { setMenu(null); onOpenBrief(); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-hover">
+              <IconDoc /> Brief &amp; links
+            </button>
             <button onClick={() => { setMenu(null); onOpen(); }} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-hover">
               <IconChat /> Chat
             </button>
@@ -190,7 +203,7 @@ export function TaskRow({
         </div>
       )}
       <div className={cell}>
-        <LinkCell value={task.link ?? null} onChange={(link) => onUpdate({ link })} />
+        <LinkCell value={linksOf(task)} onChange={(links) => onUpdate({ links })} />
       </div>
       <div className={cell}>
         <PersonCell value={task.requestor_id} onChange={(requestor_id) => onUpdate({ requestor_id })} />

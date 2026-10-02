@@ -13,11 +13,18 @@ import { TaskPanel, type PanelView } from "./TaskPanel";
 import { fileToLogo, logoError } from "../BoardLogo";
 import { CategoryIcon } from "../CategoryIcon";
 import { ProjectPeople } from "./ProjectPeople";
+import { NewTaskDialog, type NewTask } from "./NewTaskDialog";
 import { confirmDialog, notify } from "../dialogs";
 
 type Change = RealtimePostgresChangesPayload<Record<string, unknown>>;
 
-const byPosition =(a: Task, b: Task) => a.position - b.position || a.created_at.localeCompare(b.created_at);
+// Brief and links arrive with a database update; explain that instead of a raw column error.
+const briefHint = (message: string) =>
+  /'(brief|links|link)' column|column .*(brief|links)/i.test(message)
+    ? "Briefs and links need a one-time database update. Ask your admin to run supabase/add-task-brief.sql in the Supabase SQL Editor."
+    : message;
+
+const byPosition = (a: Task, b: Task) => a.position - b.position || a.created_at.localeCompare(b.created_at);
 const NO_STATUS = "none";
 const HIDDEN_KEY = "ff-hidden-statuses";
 // Statuses the "Active only" shortcut hides.
@@ -37,7 +44,10 @@ export default function BoardView({ boardId }: { boardId: string }) {
   const router = useRouter();
   const params = useSearchParams();
   const openId = params.get("task");
-  const openView: PanelView = params.get("view") === "approval" ? "approval" : "chat";
+  const viewParam = params.get("view");
+  const openView: PanelView = viewParam === "approval" || viewParam === "brief" ? viewParam : "chat";
+  // The group a new task is being created in (the New task dialog is open while set).
+  const [newTaskIn, setNewTaskIn] = useState<string | null>(null);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -186,11 +196,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
       }
       const { error } = await supabase().from("tasks").update(patch).eq("id", id);
       if (error) {
-        notify(
-          "link" in patch && /link/.test(error.message)
-            ? "Links need a one-time database update. In Supabase → SQL Editor, run:\n\nalter table public.tasks add column if not exists link text;"
-            : error.message,
-        );
+        notify(briefHint(error.message));
         load();
       }
     },
@@ -203,7 +209,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
       .insert({ board_id: boardId, requestor_id: me.id, ...fields })
       .select()
       .single();
-    if (error) return notify(error.message);
+    if (error) return notify(briefHint(error.message));
     upsert(data as Task);
     if (focus) setFresh((data as Task).id);
     return data as Task;
@@ -257,7 +263,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
 
   const openTask = (id: string | null, view: PanelView = "chat") =>
     router.replace(
-      id ? `/board/${boardId}?task=${id}${view === "approval" ? "&view=approval" : ""}` : `/board/${boardId}`,
+      id ? `/board/${boardId}?task=${id}${view === "chat" ? "" : `&view=${view}`}` : `/board/${boardId}`,
       { scroll: false },
     );
 
@@ -298,20 +304,25 @@ export default function BoardView({ boardId }: { boardId: string }) {
 
   const maxPos = (list: Task[]) => list.reduce((m, t) => Math.max(m, t.position), 0);
 
-  const newTask = () => {
-    const minPos = top.reduce((m, t) => Math.min(m, t.position), 0);
-    if (todo) setCollapsed((c) => { const n = new Set(c); n.delete(todo.id); return n; });
-    create({ title: "New task", status_id: todo?.id ?? null, position: minPos - 1 }, true);
-  };
+  // "New task" and the "+" beside a group both open the New task dialog for that group.
+  const newTask = () => setNewTaskIn(todo?.id ?? NO_STATUS);
+  const addInGroup = (key: string) => setNewTaskIn(key);
 
-  // The "+" beside a group's name: adds a task there and opens its name for typing.
-  const addInGroup = (key: string) => {
+  const createFromDialog = async (key: string, fields: NewTask) => {
     setCollapsed((c) => {
       const next = new Set(c);
       next.delete(key);
       return next;
     });
-    create({ title: "New task", status_id: key === NO_STATUS ? null : key, position: maxPos(top) + 1 }, true);
+    const made = await create({
+      title: fields.title,
+      // Only sent when filled in, so plain tasks don't depend on the brief/links columns existing.
+      ...(fields.brief ? { brief: fields.brief } : {}),
+      ...(fields.links.length ? { links: fields.links } : {}),
+      status_id: key === NO_STATUS ? null : key,
+      position: maxPos(top) + 1,
+    });
+    return !!made;
   };
 
   const addSub = async (parent: Task, stage: Option) => {
@@ -609,6 +620,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
                               onToggle={() => setExpanded((e) => toggle(e, t.id))}
                               onOpen={() => openTask(t.id)}
                               onOpenApproval={() => openTask(t.id, "approval")}
+                              onOpenBrief={() => openTask(t.id, "brief")}
                               onUpdate={(patch) => update(t.id, patch)}
                               onDelete={() => remove(t.id)}
                               onAddSub={() => setExpanded((e) => new Set(e).add(t.id))}
@@ -627,6 +639,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
                                     onSelect={() => select([k.id], !selected.has(k.id))}
                                     onOpen={() => openTask(k.id)}
                                     onOpenApproval={() => openTask(k.id, "approval")}
+                                    onOpenBrief={() => openTask(k.id, "brief")}
                                     onUpdate={(patch) => update(k.id, patch)}
                                     onDelete={() => remove(k.id)}
                                   />
@@ -682,7 +695,16 @@ export default function BoardView({ boardId }: { boardId: string }) {
           parent={openTaskObj.parent_id ? tasks.find((t) => t.id === openTaskObj.parent_id) : undefined}
           view={openView}
           onClose={() => openTask(null)}
+          onUpdate={(patch) => update(openTaskObj.id, patch)}
           onPatchLocal={(patch) => patchLocal(openTaskObj.id, patch)}
+        />
+      )}
+
+      {newTaskIn && (
+        <NewTaskDialog
+          groupName={statuses.find((s) => s.id === newTaskIn)?.name ?? "No status"}
+          onCreate={(fields) => createFromDialog(newTaskIn, fields)}
+          onClose={() => setNewTaskIn(null)}
         />
       )}
     </div>
