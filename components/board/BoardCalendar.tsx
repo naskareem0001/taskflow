@@ -14,7 +14,11 @@ const iso = (d: Date) =>
 interface Entry {
   task: Task;
   label: string;
+  /** Subitems: their stage colour. Main tasks are drawn in a soft neutral style instead. */
   color: string;
+  /** Status colour, shown as a dot on main tasks. */
+  dot: string;
+  main: boolean;
   start: string;
   end: string;
 }
@@ -54,10 +58,12 @@ export function BoardCalendar({
         const parent = t.parent_id ? byId.get(t.parent_id) : undefined;
         const stage = stages.find((s) => s.id === t.stage_id);
         const label = parent ? `${parent.title || "Untitled"} · ${stage?.name ?? t.title}` : t.title || "Untitled";
-        const color = statuses.find((s) => s.id === t.status_id)?.color ?? "#797e93";
-        return { task: t, label, color, start, end };
+        const dot = statuses.find((s) => s.id === t.status_id)?.color ?? "#797e93";
+        const color = stage?.color ?? dot;
+        return { task: t, label, color, dot, main: !parent, start, end };
       })
-      .sort((a, b) => a.start.localeCompare(b.start) || b.end.localeCompare(a.end));
+      // Main tasks first so they take the top lane, above their subitems.
+      .sort((a, b) => Number(b.main) - Number(a.main) || a.start.localeCompare(b.start) || b.end.localeCompare(a.end));
   }, [tasks, statuses, stages]);
 
   const shift = (by: number) =>
@@ -210,11 +216,18 @@ function MonthGrid({
                         key={e.task.id}
                         onClick={() => onOpen(e.task.id)}
                         title={`${e.label}\n${e.start === e.end ? formatDate(e.start) : `${formatDate(e.start)} – ${formatDate(e.end)}`}`}
-                        className={`mx-1 flex h-6 items-center truncate px-2 text-left text-xs font-medium text-white shadow-sm hover:brightness-110 ${
-                          startsHere ? "rounded-l-full" : "rounded-l-sm"
-                        } ${endsHere ? "rounded-r-full" : "rounded-r-sm"}`}
-                        style={{ gridColumn: `${from + 1} / ${to + 2}`, gridRow: lane + 2, background: e.color }}
+                        className={`mx-1 flex h-6 items-center gap-1.5 truncate px-2 text-left text-xs font-medium hover:brightness-110 ${
+                          e.main
+                            ? "border border-fg/15 bg-fg/[0.07] text-fg backdrop-blur-sm hover:bg-fg/[0.12]"
+                            : "text-white shadow-sm"
+                        } ${startsHere ? "rounded-l-full" : "rounded-l-sm"} ${endsHere ? "rounded-r-full" : "rounded-r-sm"}`}
+                        style={{
+                          gridColumn: `${from + 1} / ${to + 2}`,
+                          gridRow: lane + 2,
+                          ...(e.main ? {} : { background: e.color }),
+                        }}
                       >
+                        {e.main && <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: e.dot }} />}
                         <span className="truncate">{e.label}</span>
                       </button>
                     );
