@@ -157,7 +157,7 @@ function ProfileSection() {
           </button>
         )}
         <ColorPicker value={me.color} onChange={(color) => save({ color })} />
-        <input value={name} onChange={(e) => setName(e.target.value)} className={`${field} min-w-0 flex-1`} />
+        <input value={name} onChange={(e) => setName(e.target.value)} className={`${field} min-w-[10rem] flex-1`} />
         <button
           disabled={!name.trim() || name.trim() === me.full_name}
           onClick={() => save({ full_name: name.trim() })}
