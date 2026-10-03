@@ -7,13 +7,14 @@ import { supabase } from "@/lib/supabase/client";
 import type { Option, Task } from "@/lib/types";
 import { BoardScope, useWorkspace } from "../workspace";
 import { Avatar, InlineText, Popover, Spinner, btnGhost, btnOutline, btnPrimary } from "../ui";
-import { IconCheck, IconChevron, IconDots, IconFilter, IconLayers, IconPerson, IconPlus, IconSearch, IconTrash, IconX } from "../icons";
+import { IconCalendar, IconCheck, IconChevron, IconDots, IconFilter, IconLayers, IconPerson, IconPlus, IconSearch, IconTrash, IconX } from "../icons";
 import { AddStageRow, HeaderRow, TaskRow } from "./TaskRow";
 import { TaskPanel, type PanelView } from "./TaskPanel";
 import { fileToLogo, logoError } from "../BoardLogo";
 import { CategoryIcon } from "../CategoryIcon";
 import { ProjectPeople } from "./ProjectPeople";
 import { NewTaskDialog, type NewTask } from "./NewTaskDialog";
+import { BoardCalendar } from "./BoardCalendar";
 import { confirmDialog, notify } from "../dialogs";
 
 type Change = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -29,6 +30,7 @@ const briefHint = (message: string) =>
 const byPosition = (a: Task, b: Task) => a.position - b.position || a.created_at.localeCompare(b.created_at);
 const NO_STATUS = "none";
 const HIDDEN_KEY = "ff-hidden-statuses";
+const VIEW_KEY = "ff-board-view";
 // Statuses the "Active only" shortcut hides.
 const INACTIVE = ["backlog", "standby", "done"];
 // Subitem statuses that count as "started" when working out a task's stage.
@@ -92,12 +94,22 @@ export default function BoardView({ boardId }: { boardId: string }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Status groups this person has chosen to hide (remembered in this browser).
   const [hidden, setHidden] = useState<Set<string>>(new Set());
+  // Table (status groups) or Calendar (dated tasks on a month/year grid); remembered in this browser.
+  const [calendar, setCalendar] = useState(false);
 
   useEffect(() => {
     try {
       setHidden(new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? "[]") as string[]));
+      setCalendar(localStorage.getItem(VIEW_KEY) === "calendar");
     } catch {}
   }, []);
+
+  const showCalendar = (on: boolean) => {
+    setCalendar(on);
+    try {
+      localStorage.setItem(VIEW_KEY, on ? "calendar" : "table");
+    } catch {}
+  };
 
   const saveHidden = (next: Set<string>) => {
     setHidden(next);
@@ -535,6 +547,10 @@ export default function BoardView({ boardId }: { boardId: string }) {
               </label>
             ))}
           </Popover>
+          <button onClick={() => showCalendar(!calendar)} className={`${btnGhost} ${calendar ? "!bg-accent !text-accent-fg" : ""}`}>
+            <IconCalendar />
+            Calendar
+          </button>
           {filtering && (
             <button onClick={() => { setQuery(""); setPerson(null); setStage(null); }} className={`${btnGhost} text-muted`}>
               <IconX /> Clear
@@ -551,12 +567,14 @@ export default function BoardView({ boardId }: { boardId: string }) {
               onChanged={loadMembers}
             />
           )}
-          <button
-            onClick={() => setExpanded(expanded.size ? new Set() : new Set(top.map((t) => t.id)))}
-            className={`${btnGhost} text-muted`}
-          >
-            {expanded.size ? "Collapse subitems" : "Expand subitems"}
-          </button>
+          {!calendar && (
+            <button
+              onClick={() => setExpanded(expanded.size ? new Set() : new Set(top.map((t) => t.id)))}
+              className={`${btnGhost} text-muted`}
+            >
+              {expanded.size ? "Collapse subitems" : "Expand subitems"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -564,6 +582,13 @@ export default function BoardView({ boardId }: { boardId: string }) {
       <div className="flex-1 overflow-x-auto px-4 pb-24 pt-5 md:px-6">
         {!loaded ? (
           <div className="flex justify-center py-20"><Spinner /></div>
+        ) : calendar ? (
+          <BoardCalendar
+            tasks={tasks.filter((t) => (!filtering || matches(t)) && !hidden.has(t.status_id ?? NO_STATUS))}
+            statuses={statuses}
+            stages={stages}
+            onOpen={(id) => openTask(id)}
+          />
         ) : (
           <div className="min-w-[1330px] space-y-5">
             {groups.map((g) => {

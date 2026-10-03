@@ -9,6 +9,7 @@ create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
   full_name text not null default '',
+  avatar text,
   color text not null default '#579bfc',
   role text not null default 'member' check (role in ('admin', 'member')),
   created_at timestamptz not null default now()

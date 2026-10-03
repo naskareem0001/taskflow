@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { PALETTE } from "@/lib/format";
 import type { Option, Role } from "@/lib/types";
@@ -102,9 +102,16 @@ function ProfileSection() {
   const [name, setName] = useState(me.full_name);
   const [saved, setSaved] = useState(false);
 
-  const save = async (patch: { full_name?: string; color?: string }) => {
+  const photoInput = useRef<HTMLInputElement>(null);
+
+  const save = async (patch: { full_name?: string; color?: string; avatar?: string | null }) => {
     const { error } = await supabase().from("profiles").update(patch).eq("id", me.id);
-    if (error) return notify(error.message);
+    if (error)
+      return notify(
+        /avatar/i.test(error.message)
+          ? "Profile pictures need a one-time database update. Ask your admin to run supabase/add-avatars.sql in the Supabase SQL Editor."
+          : error.message,
+      );
     await reload();
     setSaved(true);
     setTimeout(() => setSaved(false), 1500);
@@ -113,7 +120,42 @@ function ProfileSection() {
   return (
     <Card title="Your profile">
       <div className="flex flex-wrap items-center gap-3">
-        <Avatar profile={me} size={40} />
+        <input
+          ref={photoInput}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            try {
+              await save({ avatar: await fileToAvatar(file) });
+            } catch {
+              notify("That file couldn't be read as an image. Try a PNG or JPG.");
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => photoInput.current?.click()}
+          className="group relative shrink-0 rounded-full"
+          title={me.avatar ? "Change picture" : "Add a picture"}
+        >
+          <Avatar profile={me} size={48} />
+          <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/45 text-[10px] font-semibold text-white opacity-0 transition group-hover:opacity-100">
+            {me.avatar ? "Change" : "Add"}
+          </span>
+        </button>
+        {me.avatar ? (
+          <button type="button" onClick={() => save({ avatar: null })} className="text-sm text-muted hover:text-red-500">
+            Remove picture
+          </button>
+        ) : (
+          <button type="button" onClick={() => photoInput.current?.click()} className="text-sm font-medium text-accent hover:underline">
+            Add picture
+          </button>
+        )}
         <ColorPicker value={me.color} onChange={(color) => save({ color })} />
         <input value={name} onChange={(e) => setName(e.target.value)} className={`${field} min-w-0 flex-1`} />
         <button
@@ -128,6 +170,26 @@ function ProfileSection() {
       <p className="mt-2 text-sm text-muted">{me.email}</p>
     </Card>
   );
+}
+
+/** Crops an image to a centred square and shrinks it to a small data URL for a profile picture. */
+async function fileToAvatar(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const size = Math.min(192, side);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    canvas
+      .getContext("2d")!
+      .drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+    return canvas.toDataURL("image/webp", 0.85);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function PasswordSection() {

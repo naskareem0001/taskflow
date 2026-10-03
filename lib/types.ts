@@ -5,6 +5,8 @@ export interface Profile {
   email: string;
   full_name: string;
   color: string;
+  /** Profile picture as a small square data URL, or null. */
+  avatar?: string | null;
   role: Role;
   created_at: string;
 }

@@ -17,6 +17,17 @@ export const field =
 export function Avatar({ profile, size = 28 }: { profile?: Profile; size?: number }) {
   if (!profile) return null;
   const label = profile.full_name || profile.email;
+  if (profile.avatar) {
+    return (
+      <img
+        src={profile.avatar}
+        alt={label}
+        title={label}
+        className="inline-block shrink-0 select-none rounded-full object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
   return (
     <span
       title={label}
