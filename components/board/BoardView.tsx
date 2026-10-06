@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Option, Task } from "@/lib/types";
 import { BoardScope, useWorkspace } from "../workspace";
 import { Avatar, InlineText, Popover, Spinner, btnGhost, btnOutline, btnPrimary } from "../ui";
-import { IconCalendar, IconCheck, IconChevron, IconDots, IconFilter, IconLayers, IconPerson, IconPlus, IconSearch, IconTrash, IconX } from "../icons";
+import { IconCalendar, IconColumns, IconCheck, IconChevron, IconDots, IconFilter, IconLayers, IconPerson, IconPlus, IconSearch, IconTrash, IconX } from "../icons";
 import { AddStageRow, HeaderRow, TaskRow } from "./TaskRow";
 import { TaskPanel, type PanelView } from "./TaskPanel";
 import { fileToLogo, logoError } from "../BoardLogo";
@@ -15,6 +15,7 @@ import { CategoryIcon } from "../CategoryIcon";
 import { ProjectPeople } from "./ProjectPeople";
 import { NewTaskDialog, type NewTask } from "./NewTaskDialog";
 import { BoardCalendar } from "./BoardCalendar";
+import { BoardKanban } from "./BoardKanban";
 import { confirmDialog, notify } from "../dialogs";
 
 type Change = RealtimePostgresChangesPayload<Record<string, unknown>>;
@@ -94,20 +95,25 @@ export default function BoardView({ boardId }: { boardId: string }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   // Status groups this person has chosen to hide (remembered in this browser).
   const [hidden, setHidden] = useState<Set<string>>(new Set());
-  // Table (status groups) or Calendar (dated tasks on a month/year grid); remembered in this browser.
-  const [calendar, setCalendar] = useState(false);
+  // Table (status groups), Board (To do / Doing / Done columns) or Calendar; remembered in this browser.
+  const [view, setView] = useState<"table" | "board" | "calendar">("table");
+  const calendar = view === "calendar";
+  const kanban = view === "board";
 
   useEffect(() => {
     try {
       setHidden(new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? "[]") as string[]));
-      setCalendar(localStorage.getItem(VIEW_KEY) === "calendar");
+      const saved = localStorage.getItem(VIEW_KEY);
+      if (saved === "calendar" || saved === "board") setView(saved);
     } catch {}
   }, []);
 
-  const showCalendar = (on: boolean) => {
-    setCalendar(on);
+  // Clicking the active view's button goes back to the table.
+  const showView = (next: "board" | "calendar") => {
+    const v = view === next ? "table" : next;
+    setView(v);
     try {
-      localStorage.setItem(VIEW_KEY, on ? "calendar" : "table");
+      localStorage.setItem(VIEW_KEY, v);
     } catch {}
   };
 
@@ -547,7 +553,11 @@ export default function BoardView({ boardId }: { boardId: string }) {
               </label>
             ))}
           </Popover>
-          <button onClick={() => showCalendar(!calendar)} className={`${btnGhost} ${calendar ? "!bg-accent !text-accent-fg" : ""}`}>
+          <button onClick={() => showView("board")} className={`${btnGhost} ${kanban ? "!bg-accent !text-accent-fg" : ""}`}>
+            <IconColumns />
+            Board
+          </button>
+          <button onClick={() => showView("calendar")} className={`${btnGhost} ${calendar ? "!bg-accent !text-accent-fg" : ""}`}>
             <IconCalendar />
             Calendar
           </button>
@@ -567,7 +577,7 @@ export default function BoardView({ boardId }: { boardId: string }) {
               onChanged={loadMembers}
             />
           )}
-          {!calendar && (
+          {view === "table" && (
             <button
               onClick={() => setExpanded(expanded.size ? new Set() : new Set(top.map((t) => t.id)))}
               className={`${btnGhost} text-muted`}
@@ -582,6 +592,16 @@ export default function BoardView({ boardId }: { boardId: string }) {
       <div className="flex-1 overflow-x-auto px-4 pb-24 pt-5 md:px-6">
         {!loaded ? (
           <div className="flex justify-center py-20"><Spinner /></div>
+        ) : kanban ? (
+          <BoardKanban
+            tasks={visibleTop}
+            allTasks={tasks}
+            statuses={statuses}
+            stages={stages}
+            onOpen={(id) => openTask(id)}
+            onMove={(id, status_id) => update(id, { status_id })}
+            onAdd={(statusId) => setNewTaskIn(statusId)}
+          />
         ) : calendar ? (
           <BoardCalendar
             tasks={tasks.filter((t) => (!filtering || matches(t)) && !hidden.has(t.status_id ?? NO_STATUS))}
