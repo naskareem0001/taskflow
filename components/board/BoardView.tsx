@@ -594,13 +594,17 @@ export default function BoardView({ boardId }: { boardId: string }) {
           <div className="flex justify-center py-20"><Spinner /></div>
         ) : kanban ? (
           <BoardKanban
-            tasks={visibleTop}
+            tasks={tasks
+              .filter((k) => {
+                const parent = k.parent_id ? tasks.find((p) => p.id === k.parent_id) : undefined;
+                return !!parent && (!filtering || matches(k) || matches(parent));
+              })
+              .sort(byPosition)}
             allTasks={tasks}
             statuses={statuses}
             stages={stages}
             onOpen={(id) => openTask(id)}
             onMove={(id, status_id) => update(id, { status_id })}
-            onAdd={(statusId) => setNewTaskIn(statusId)}
           />
         ) : calendar ? (
           <BoardCalendar
