@@ -101,11 +101,16 @@ export function BoardKanban({
                     </span>
                     <p className="mt-1.5 break-words text-sm font-medium leading-5">{parent?.title || "Untitled"}</p>
                     <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                      {t.start_date && t.due_date && <span>{formatDate(t.start_date)} –</span>}
                       <div className="flex-1" />
-                      {t.due_date && (
-                        <span className={overdue ? "font-medium text-red-500" : done ? "line-through" : ""}>
-                          {formatDate(t.due_date)}
+                      {(t.start_date || t.due_date) && (
+                        <span className="whitespace-nowrap">
+                          {t.start_date && formatDate(t.start_date)}
+                          {t.start_date && t.due_date && " – "}
+                          {t.due_date && (
+                            <span className={overdue ? "font-medium text-red-500" : done ? "line-through" : ""}>
+                              {formatDate(t.due_date)}
+                            </span>
+                          )}
                         </span>
                       )}
                       {owner && <Avatar profile={owner} size={22} />}
