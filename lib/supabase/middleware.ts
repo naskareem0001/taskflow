@@ -28,9 +28,13 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Ask Supabase who this is, but don't let a slow auth server hang every page: after a few
+  // seconds fall back to the session in the cookie. This only decides where to route; the
+  // database's row-level security still checks every request.
+  const user = await Promise.race([
+    supabase.auth.getUser().then(({ data }) => data.user),
+    new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 4000)),
+  ]).then(async (u) => (u === undefined ? (await supabase.auth.getSession()).data.session?.user ?? null : u));
 
   const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
   if (!user && !isPublic) {
