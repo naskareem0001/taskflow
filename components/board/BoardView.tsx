@@ -190,20 +190,42 @@ export default function BoardView({ boardId }: { boardId: string }) {
 
   // A task's stage is the stage of its last subitem that has been started
   // (status Doing or Done). Subitems still waiting in Todo etc. don't count.
+  // Its status follows the subitems too: all Done → Done; any started → Doing.
+  // Until a subitem is started, the task keeps whatever status it was given.
   const syncParentStage = useCallback(
     (parentId: string, list: Task[]) => {
-      const started = list
-        .filter((t) => t.parent_id === parentId)
-        .sort(byPosition)
-        .filter((k) => STARTED.includes(statuses.find((s) => s.id === k.status_id)?.name.trim().toLowerCase() ?? ""));
+      const kids = list.filter((t) => t.parent_id === parentId).sort(byPosition);
+      const nameOf = (k: Task) => statuses.find((s) => s.id === k.status_id)?.name.trim().toLowerCase() ?? "";
+      const started = kids.filter((k) => STARTED.includes(nameOf(k)));
       const stage_id = started.length ? started[started.length - 1].stage_id : null;
       const parent = list.find((t) => t.id === parentId);
-      if (!parent || parent.stage_id === stage_id) return;
-      patchLocal(parentId, { stage_id });
-      supabase().from("tasks").update({ stage_id }).eq("id", parentId).then();
+      if (!parent) return;
+      const statusNamed = (n: string) => statuses.find((s) => s.name.trim().toLowerCase() === n)?.id;
+      const status_id =
+        kids.length && kids.every((k) => nameOf(k) === "done")
+          ? statusNamed("done") ?? parent.status_id
+          : started.length
+            ? statusNamed("doing") ?? parent.status_id
+            : parent.status_id;
+      const patch: Partial<Task> = {};
+      if (parent.stage_id !== stage_id) patch.stage_id = stage_id;
+      if (parent.status_id !== status_id) patch.status_id = status_id;
+      if (!Object.keys(patch).length) return;
+      patchLocal(parentId, patch);
+      supabase().from("tasks").update(patch).eq("id", parentId).then();
     },
     [statuses, patchLocal],
   );
+
+  // Bring tasks whose subitems changed before this rule existed (or elsewhere) into line once loaded.
+  const synced = useRef<string | null>(null);
+  useEffect(() => {
+    if (!loaded || synced.current === boardId || !statuses.length) return;
+    if (tasks.some((t) => t.board_id !== boardId)) return;
+    synced.current = boardId;
+    const parents = new Set(tasks.filter((t) => t.parent_id).map((t) => t.parent_id as string));
+    parents.forEach((p) => syncParentStage(p, tasks));
+  }, [loaded, boardId, tasks, statuses, syncParentStage]);
 
   const update = useCallback(
     async (id: string, patch: Partial<Task>) => {
