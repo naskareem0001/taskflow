@@ -36,6 +36,8 @@ const VIEW_KEY = "ff-board-view";
 const INACTIVE = ["backlog", "standby", "done"];
 // Subitem statuses that count as "started" when working out a task's stage.
 const STARTED = ["doing", "done"];
+// Subitem statuses that mean work hasn't begun; they don't set the task's status.
+const NOT_STARTED = ["todo", "to do", "backlog"];
 
 export default function BoardView({ boardId }: { boardId: string }) {
   const { boards, statuses, stages: allStages, categories, profiles, byId, me, isAdmin } = useWorkspace();
@@ -190,8 +192,8 @@ export default function BoardView({ boardId }: { boardId: string }) {
 
   // A task's stage is the stage of its last subitem that has been started
   // (status Doing or Done). Subitems still waiting in Todo etc. don't count.
-  // Its status follows the subitems too: all Done → Done; any started → Doing.
-  // Until a subitem is started, the task keeps whatever status it was given.
+  // Its status follows the subitems too. Until a subitem is started, the task keeps whatever
+  // status it was given.
   const syncParentStage = useCallback(
     (parentId: string, list: Task[]) => {
       const kids = list.filter((t) => t.parent_id === parentId).sort(byPosition);
@@ -200,13 +202,9 @@ export default function BoardView({ boardId }: { boardId: string }) {
       const stage_id = started.length ? started[started.length - 1].stage_id : null;
       const parent = list.find((t) => t.id === parentId);
       if (!parent) return;
-      const statusNamed = (n: string) => statuses.find((s) => s.name.trim().toLowerCase() === n)?.id;
-      const status_id =
-        kids.length && kids.every((k) => nameOf(k) === "done")
-          ? statusNamed("done") ?? parent.status_id
-          : started.length
-            ? statusNamed("doing") ?? parent.status_id
-            : parent.status_id;
+      // The task's status copies the latest subitem that's being worked on (anything past Todo/Backlog).
+      const worked = kids.filter((k) => k.status_id && !NOT_STARTED.includes(nameOf(k)));
+      const status_id = worked.length ? worked[worked.length - 1].status_id : parent.status_id;
       const patch: Partial<Task> = {};
       if (parent.stage_id !== stage_id) patch.stage_id = stage_id;
       if (parent.status_id !== status_id) patch.status_id = status_id;
