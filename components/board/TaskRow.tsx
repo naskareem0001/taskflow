@@ -5,7 +5,7 @@ import { isDoneName } from "@/lib/format";
 import type { Option, Task } from "@/lib/types";
 import { useWorkspace } from "../workspace";
 import { InlineText, Popover } from "../ui";
-import { IconChat, IconCheck, IconChevron, IconDots, IconPlus, IconTrash } from "../icons";
+import { IconChat, IconCheck, IconChevron, IconDots, IconGrip, IconPlus, IconTrash } from "../icons";
 import { linksOf } from "./links";
 import { ApprovalCell, DateCell, LinkCell, OptionCell, PersonCell } from "./cells";
 
@@ -77,6 +77,7 @@ export function TaskRow({
   onUpdate,
   onDelete,
   onAddSub,
+  reorder,
 }: {
   task: Task;
   sub?: boolean;
@@ -95,19 +96,52 @@ export function TaskRow({
   onUpdate: (patch: Partial<Task>) => void;
   onDelete: () => void;
   onAddSub?: () => void;
+  /** Drag-to-reorder within the row's group. Left out when the row can't be moved. */
+  reorder?: {
+    dragging: boolean;
+    /** Where a dragged row would land relative to this one. */
+    hint: "above" | "below" | null;
+    onStart: () => void;
+    onEnd: () => void;
+    onOver: (where: "above" | "below") => void;
+    onDrop: () => void;
+  };
 }) {
   const { statuses, stages, allStages } = useWorkspace();
+  const rowRef = useRef<HTMLDivElement>(null);
   const tint = sub ? allStages.find((s) => s.id === task.stage_id)?.color : undefined;
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const done = isDoneName(statuses.find((s) => s.id === task.status_id)?.name);
 
   return (
     <div
-      className={`${GRID} group relative h-10 border-b border-line text-sm ${selected ? "bg-accent/15" : sub ? "bg-panel-2/60" : ""}`}
+      ref={rowRef}
+      className={`${GRID} group relative h-10 border-b border-line text-sm ${selected ? "bg-accent/15" : sub ? "bg-panel-2/60" : ""} ${
+        reorder?.dragging ? "opacity-40" : ""
+      }`}
       // A subitem's whole row carries a light wash of its stage colour, so the stage reads at a glance.
       style={
         tint && !selected
           ? { background: `color-mix(in srgb, ${tint} 24%, transparent)`, boxShadow: `inset 4px 0 0 ${tint}` }
+          : reorder?.hint
+            ? { boxShadow: `inset 0 ${reorder.hint === "above" ? "3px" : "-3px"} 0 var(--accent)` }
+            : undefined
+      }
+      onDragOver={
+        reorder
+          ? (e) => {
+              e.preventDefault();
+              const r = e.currentTarget.getBoundingClientRect();
+              reorder.onOver(e.clientY < r.top + r.height / 2 ? "above" : "below");
+            }
+          : undefined
+      }
+      onDrop={
+        reorder
+          ? (e) => {
+              e.preventDefault();
+              reorder.onDrop();
+            }
           : undefined
       }
     >
@@ -118,7 +152,23 @@ export function TaskRow({
         onChange={onSelect}
         aria-label={`Select ${task.title}`}
       />
-      <div className={`flex min-w-0 items-center gap-1 border-r border-line pr-1 ${sub ? "col-span-2 pl-12" : "pl-2"}`}>
+      <div className={`flex min-w-0 items-center gap-1 border-r border-line pr-1 ${sub ? "col-span-2 pl-12" : reorder ? "pl-0.5" : "pl-2"}`}>
+        {reorder && (
+          <span
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", task.id);
+              if (rowRef.current) e.dataTransfer.setDragImage(rowRef.current, 24, 20);
+              reorder.onStart();
+            }}
+            onDragEnd={reorder.onEnd}
+            className="cursor-grab rounded py-1 text-muted opacity-0 hover:bg-hover hover:text-fg active:cursor-grabbing group-hover:opacity-100"
+            title="Drag to reorder"
+          >
+            <IconGrip className="h-4 w-4" />
+          </span>
+        )}
         {!sub && (
           <button
             onClick={onToggle}

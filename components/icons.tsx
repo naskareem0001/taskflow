@@ -42,6 +42,7 @@ export const IconDoc = (p: P) => <Svg {...p}><path d="M14 3H7a2 2 0 0 0-2 2v14a2
 export const IconLink = (p: P) => <Svg {...p}><path d="M10 13a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.2 1.2" /><path d="M14 11a5 5 0 0 0-7.1 0l-3 3a5 5 0 0 0 7.1 7.1l1.2-1.2" /></Svg>;
 export const IconEdit = (p: P) => <Svg {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></Svg>;
 export const IconColumns = (p: P) => <Svg {...p}><rect x="3" y="4" width="5" height="16" rx="1.5" /><rect x="9.5" y="4" width="5" height="11" rx="1.5" /><rect x="16" y="4" width="5" height="14" rx="1.5" /></Svg>;
+export const IconGrip = (p: P) => <Svg {...p}><circle cx="9" cy="6" r="1" /><circle cx="15" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="9" cy="18" r="1" /><circle cx="15" cy="18" r="1" /></Svg>;
 export const IconCalendar = (p: P) => <Svg {...p}><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" /></Svg>;
 export const IconFilter = (p: P) =><Svg {...p}><path d="M3 5h18l-7 8v6l-4-2v-4z" /></Svg>;
 export const IconSettings =(p: P) => (

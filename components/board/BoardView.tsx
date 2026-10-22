@@ -300,6 +300,21 @@ export default function BoardView({ boardId }: { boardId: string }) {
     }
   };
 
+  // ─── Reordering ─────────────────────────────────────────────────────────
+  // Drag a task's grip within its status group; the group's tasks are renumbered in the new order.
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dropAt, setDropAt] = useState<{ id: string; where: "above" | "below" } | null>(null);
+
+  const moveWithin = (group: Task[], targetId: string, where: "above" | "below") => {
+    if (!dragId || dragId === targetId || !group.some((t) => t.id === dragId)) return;
+    const order = group.filter((t) => t.id !== dragId);
+    const at = order.findIndex((t) => t.id === targetId);
+    order.splice(where === "above" ? at : at + 1, 0, group.find((t) => t.id === dragId)!);
+    order.forEach((t, i) => {
+      if (t.position !== i + 1) update(t.id, { position: i + 1 });
+    });
+  };
+
   const openTask = (id: string | null, view: PanelView = "chat") =>
     router.replace(
       id ? `/board/${boardId}?task=${id}${view === "chat" ? "" : `&view=${view}`}` : `/board/${boardId}`,
@@ -693,6 +708,26 @@ export default function BoardView({ boardId }: { boardId: string }) {
                               onUpdate={(patch) => update(t.id, patch)}
                               onDelete={() => remove(t.id)}
                               onAddSub={() => setExpanded((e) => new Set(e).add(t.id))}
+                              reorder={
+                                filtering || g.tasks.length < 2
+                                  ? undefined
+                                  : {
+                                      dragging: dragId === t.id,
+                                      hint: dragId && dragId !== t.id && dropAt?.id === t.id && g.tasks.some((x) => x.id === dragId) ? dropAt.where : null,
+                                      onStart: () => setDragId(t.id),
+                                      onEnd: () => {
+                                        setDragId(null);
+                                        setDropAt(null);
+                                      },
+                                      onOver: (where) =>
+                                        setDropAt((d) => (d?.id === t.id && d.where === where ? d : { id: t.id, where })),
+                                      onDrop: () => {
+                                        if (dropAt?.id === t.id) moveWithin(g.tasks, t.id, dropAt.where);
+                                        setDragId(null);
+                                        setDropAt(null);
+                                      },
+                                    }
+                              }
                             />
                             {open && (
                               <div className="border-l-4 border-l-accent/40">
